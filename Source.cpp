@@ -12,7 +12,6 @@
 #include <vector>
 #include <string>
 #include "print.h"
-#include <ctime> // time_t
 #include <cstdio>
 
 using namespace std;
@@ -25,19 +24,20 @@ const double dt = 1.0; //timestep
 const double tau = diameter * dzeta / dt;
 
 	//Parameters
-const double maxLoverD = 5.0; //gives relation between maxL and D
-const double ki = 0.25 * tau; //internal spring constant, must be smaller dan dzeta*D*dt/2 otherwise system will explode, good value is 0.25
-const double ko = 0.1 * tau; //overlap spring constant
+const double maxLoverD = 5; //gives relation between maxL and D, for rod-shaped particles: LD > 1
+const double ki = 0.1 * tau; //internal spring constant, must be smaller dan dzeta*D*dt/2 otherwise system will explode, good value is 0.25
+const double ko = 0.2 * tau; //overlap spring constant
 const int relaxTime = 5; //set time to let system relax after growth step
-const double growthRate = 0.00005 * tau * relaxTime; //number gives growth rate per timestep. exp: 1.23 per hour, small compared to ki for relaxation
-const double growthRateDev = 0.05 * growthRate; //sets deviation in growth rate
-const double maxLengthDev = 0.02 * diameter * maxLoverD; //sets deviation in max length
-const double orientNoise = 0.01; //sets value for noise in orientation of daughter cells to prevent growing in one line
+const double growthRate = 0.00005 * (0.25 * (maxLoverD + diameter)) * tau * relaxTime; //number gives growth rate per timestep. experiments: 1.23 per hour, must be small compared to ki for relaxation
+const double growthRateDev = 0.1 * growthRate; //sets deviation in growth rate
+const double maxLengthDev = 0.1 * diameter * maxLoverD; //sets deviation in max length
+const double orientNoise = 0.1; //sets value for noise in orientation of daughter cells to prevent growing in one line
 
 	//Constants
 const double maxLength = diameter * maxLoverD; //sets mean maximum length of particles
 const double startLength = maxLength / 2; //starting length of first particle
-const int Nmax = 200; //maximum amount of particles
+
+const int Nmax = 4000; //maximum amount of particles
 
 	//Random number generator
 boost::mt19937 generator(time(0)); //number generator from random list
@@ -316,7 +316,6 @@ void analyzeAll(vector<Particle> &p, int nop, Print &myPrint, int save, int ts)
 							if ((theta12 < ts && theta23 < ts && theta31 > ts) || (theta23 < ts && theta31 < ts && theta12 > ts) || (theta12 < ts && theta31 < ts && theta23 > ts))
 							{
 								p[d].ram = 1; //defect
-								//nodef++;
 							}
 							notr++;
 							double sumcos = cos(2 * p[d].theta) + cos(2 * p[nb1].theta) + cos(2 * p[nb2].theta); //use for sop triangle
@@ -350,10 +349,12 @@ int main()
 	string dataNumber = "0123456789abcdefghij"; //able to create up to 20 folders during one simulation
 	int nop; //number of particles is one at start
 	int ts; //timestep
-	int save = 400; //determines how many times data is saved, for nop = 3000 time runs till 650000. 400 gives nice set of data
+	int save = 500; //determines how many times data is saved, for nop = 3000 time runs till 650000. 400 gives nice set of data
 	for (int loop = 0;loop < 1;loop++) //multiple loops to gather data, set number after loop < ..., to set number of data folders
 	{
-		cout << "Type of sim: loop nr = " << loop << ", nop = " << Nmax << ", mu = " << growthRate/relaxTime << ", muDev = " << growthRateDev << ", L/D = " << maxLoverD << ", Ldev = " << maxLengthDev << ", k_i = " << ki / tau << ", DF = RAM+SOPTR." << endl;
+		cout << "Type of sim: loop nr = " << loop << ", nop = " << Nmax << endl;
+		cout << "Mu = " << growthRate / relaxTime << ", muDev = " << growthRateDev << ", L/D = " << maxLoverD << ", Ldev = " << maxLengthDev << ", k_i = " << ki / tau << ", k_o = " << ko / tau << endl;
+		cout << "DF = RAM+SOPTR." << ", ON = " << orientNoise << endl;
 		nop = 1;
 		ts = 0;
 
@@ -366,7 +367,6 @@ int main()
 
 		while (nop < Nmax + 1) //timestep
 		{
-			//int nodef = 0; //number of defects
 			if (ts % relaxTime == 0) //grow and relax the system
 				growAll(p, nop); // t < 1 ns
 
@@ -378,9 +378,9 @@ int main()
 			if (ts % (save * 10) == 0) //printing now separate from the movement
 				printAll(p, print);
 
-			moveAll(p, nop);
+			moveAll(p, nop); //find forces, velocities and movement of particles
 
-			analyzeAll(p, nop, print, save, ts);
+			analyzeAll(p, nop, print, save, ts); //analyze system to find order parameter and defects
 
 			if (ts % 10000 == 0)
 				cout << "At time " << ts << " nop is " << nop << endl;
