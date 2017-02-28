@@ -5,6 +5,14 @@
 - why cstdio?
 */
 
+/* SETUP:
+- set parameters
+- set max number of particles
+- change folder name
+- choose number of loops (number of data files)
+- optional: set lag time to save, ...
+*/
+
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
@@ -18,13 +26,13 @@
 using namespace std;
 const double pi = 4 * atan(1);
 
-	//Characteristics
+//Characteristics
 const double diameter = 1.0; //diameter should equal 0.75 +- 0.0375 micrometer in real life
 const double dzeta = 1.0; //viscous drag coefficient
 const double dt = 1.0; //timestep
 const double tau = diameter * dzeta / dt;
 
-	//Parameters
+//Parameters
 const double maxLoverD = 5; //gives relation between maxL and D, for rod-shaped particles: LD > 1
 const double ki = 0.1 * tau; //internal spring constant, must be smaller dan dzeta*D*dt/2 otherwise system will explode, good value is 0.25
 const double ko = 0.2 * tau; //overlap spring constant
@@ -34,13 +42,13 @@ const double growthRateDev = 0.1 * growthRate; //sets deviation in growth rate
 const double maxLengthDev = 0.1 * diameter * maxLoverD; //sets deviation in max length
 const double orientNoise = 0.1; //sets value for noise in orientation of daughter cells to prevent growing in one line
 
-	//Constants
+								//Constants
 const double maxLength = diameter * maxLoverD; //sets mean maximum length of particles
 const double startLength = maxLength / 2; //starting length of first particle
 
-const int Nmax = 4000; //maximum amount of particles
+const int Nmax = 2000; //maximum amount of particles
 
-	//Random number generator
+					   //Random number generator
 boost::mt19937 generator(time(0)); //number generator from random list
 boost::normal_distribution<> //setup distributions
 normalDistGrowth(0.0, growthRateDev), //growth distribution added to daughter cells, sigma = 0.277
@@ -88,8 +96,8 @@ Particle::Particle(double xstart, double ystart, double angle, double length, do
 	xvel1 = 0.0; yvel1 = 0.0; xvel2 = 0.0; yvel2 = 0.0; //velocities of both ends of particle
 	Fx1 = 0.0; Fy1 = 0.0; Fx2 = 0.0; Fy2 = 0.0;
 
-	oop = 0.0; ram = 0;
-	colour = 200; //used for visualisation
+	oop = 1.0; ram = 0;
+	colour = 180; //used for visualisation
 }
 
 void Particle::grow()
@@ -259,7 +267,7 @@ void moveAll(vector<Particle> &p, int nop)
 	double distx, disty, range;
 	for (int m = 0; m < nop; m++) //second loop for movement of particles
 	{
-		for (int nb = m+1; nb < nop; nb++)
+		for (int nb = m + 1; nb < nop; nb++)
 		{
 			distx = (p[m].xcpos - p[nb].xcpos) * (p[m].xcpos - p[nb].xcpos);
 			disty = (p[m].ycpos - p[nb].ycpos) * (p[m].ycpos - p[nb].ycpos);
@@ -277,22 +285,31 @@ void analyzeAll(vector<Particle> &p, int nop, Print &myPrint, int save, int ts)
 {
 	int amonb; //amount of neighbours
 	double sumsop; //sum of sop over triangles
-	int notr; //number of triangles
+				   //int notr; //number of triangles
 	for (int d = 0; d < nop; d++) //third loop to find defects
 	{
 		amonb = p[d].neighbours.size();
 		sumsop = 0.0;
-		notr = 0;
+		//notr = 0;
 
-		if (amonb > 1) //if using triangles than amonb > 1
+		if (amonb > 0) //if using triangles than amonb > 1, if using neighbours than amonb > 0
 		{
 			for (int a = 0; a < amonb; a++) //loop over neighbours
 			{
 				//use to determine oop or sop
 				int nb1 = p[d].neighbours[a]; //ID of neighbour 1
+
+				double dtheta = p[d].theta - p[nb1].theta; //use for sop nb
+				if (dtheta > pi / 2)
+					dtheta = pi - dtheta;
+				else if (dtheta < -pi / 2)
+					dtheta += pi;
+
+				sumsop += cos(2 * dtheta);
+
 				int nonb1 = p[nb1].neighbours.size(); //set number of neighbours of nb1
 
-				for (int b = 0;b < amonb;b++) //use loop for finding defects with rotational angle method
+				for (int b = 0; b < amonb; b++) //use loop for finding defects with rotational angle method
 				{
 					if (b > a)
 					{
@@ -316,55 +333,63 @@ void analyzeAll(vector<Particle> &p, int nop, Print &myPrint, int save, int ts)
 							{
 								p[d].ram = 1; //defect
 							}
-							notr++;
-							double sumcos = cos(2 * p[d].theta) + cos(2 * p[nb1].theta) + cos(2 * p[nb2].theta); //use for sop triangle
-							double sumsin = sin(2 * p[d].theta) + sin(2 * p[nb1].theta) + sin(2 * p[nb2].theta);
-							sumsop += 1 - 2 * sqrt((sumcos / 6) * (sumcos / 6) + (sumsin / 6) * (sumsin / 6));
+							//notr++;
+							//double sumcos = cos(2 * p[d].theta) + cos(2 * p[nb1].theta) + cos(2 * p[nb2].theta); //use for sop triangle
+							//double sumsin = sin(2 * p[d].theta) + sin(2 * p[nb1].theta) + sin(2 * p[nb2].theta);
+							//sumsop += 2 * sqrt((sumcos / 6) * (sumcos / 6) + (sumsin / 6) * (sumsin / 6));
 						}
 					}
 				}
 			}
-			if (notr > 0)
-				p[d].oop = sumsop / notr; //gives sop from 0 to 1 for triangles
+			p[d].oop = sumsop / amonb; //use for sop nb
+									   //if (notr > 0)
+									   //	p[d].oop = sumsop / notr; //gives sop from 0 to 1 for triangles
+			if (p[d].ram == 1)
+				p[d].colour = 10;
+			else
+				p[d].colour = (int)((1 - p[d].oop) * 80 + 180);
 		}
-		if (p[d].ram == 1)
-			p[d].colour = 10;
-		else
-			p[d].colour = (int)(p[d].oop * 200 + 180);
 
 		if (ts % save == 0)
-			myPrint.print_data_oop(ts, p[d].ID, p[d].xcpos, p[d].ycpos, p[d].theta, p[d].L, p[d].oop, p[d].ram); //save densities, in cluster 8 inputs are needed
+			myPrint.print_data(ts, p[d].ID, p[d].xcpos, p[d].ycpos, p[d].theta, p[d].L, p[d].oop, p[d].ram); //save densities, in cluster 8 inputs are needed
 
 		p[d].ram = 0; //reset defect after printing
-		p[d].oop = 0.0; //reset oop after printing
+		p[d].oop = 1.0; //reset oop after printing
 	}
 }
 
 int main()
 {
 	int start = time(0);
-	string dataNumber = "0123456789abcdefghij"; //able to create up to 20 folders during one simulation
-	int nop; //number of particles is one at start
+	string dataNumber = "0123456789abcdefghijklmnopqrstuvwxyz"; //able to create up to 36 datafiles during one simulation
+	int makefolder = 1;
+	int nop; //number of particles
 	int ts; //timestep
-	int save = 400; //determines how many times data is saved, for nop = 3000 time runs till 650000. 400 gives nice set of data
+	int save = 300; //determines how many times data is saved, for nop = 3000 time runs till 650000. 400 gives nice set of data
 
+	string folderName = "Test"; //name of data folder
 	int startRound = 0;
 	int noRounds = 1; //number of rounds
+	
 	for (int round = startRound; round < (startRound + noRounds); round++) //multiple rounds to gather data, set number after round < ..., to set number of data folders
 	{
 		cout << "Type of sim: loop nr = " << round << ", nop = " << Nmax << endl;
 		cout << "Mu = " << growthRate / relaxTime << ", muDev = " << growthRateDev << ", L/D = " << maxLoverD << ", Ldev = " << maxLengthDev << ", k_i = " << ki / tau << ", k_o = " << ko / tau << endl;
-		cout << "DF = RAM+SOPTR" << ", ON = " << orientNoise << endl;
+		cout << "DF = RAM+SOPnb" << ", ON = " << orientNoise << endl;
 
 		nop = 1;
 		ts = 0;
 
-		string nameData(1, dataNumber[round]); //setup printing for visualisation and data writing
+		//setup printing for visualisation and data writing
+		string dataName(1, dataNumber[round]);
+		if (round != startRound)
+			makefolder = 0; //only make run directory for first loop
 		Print print;
-		print.init(nameData, nop);
+		print.init(folderName, dataName, nop, makefolder);
 		print.N = nop;
 
-		vector<Particle> p(1, Particle(0.0, 0.0, 0.0, startLength, diameter, growthRate)); //initialise one particle
+		//initialise particle
+		vector<Particle> p(1, Particle(0.0, 0.0, 0.0, startLength, diameter, growthRate));
 
 		while (nop < Nmax + 1) //timestep
 		{
