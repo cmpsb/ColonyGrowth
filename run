@@ -1,0 +1,3 @@
+#!/bin/bash
+g++ Source.cpp coordinate.cpp twovec.cpp particle.cpp  -o my.out -std=gnu++11
+./my.out
