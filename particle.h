@@ -20,6 +20,7 @@ struct Particle{
 	void grow();
     void str();
     void forceInternal();
+    void removeSelfOverlap();
     void move();
     void clear();
 };

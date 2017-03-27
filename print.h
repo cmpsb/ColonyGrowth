@@ -32,7 +32,7 @@
 
 using namespace std;
 
-const string path = "/home/dvanholthetotechten/dataDF/";
+const string path = "/home/romano/Documents/ProjectResults/";
 // On windows this will look like
 // path = "C:\\Users\\name\\output folder\\";
 // It doesn't matter if your path contains spaces
@@ -41,149 +41,148 @@ const string path = "/home/dvanholthetotechten/dataDF/";
 
 struct Print
 {
-	Print();
-	~Print();
+    Print();
+    ~Print();
 
-	void init(string, string, int, int);                 // Initialize filesystem and output streams
-	void set_no_particles(int);             // Use this to set the number of particles if it changes
+    void init(string, int);                 // Initialize filesystem and output streams
+    void set_no_particles(int);             // Use this to set the number of particles if it changes
 	void print_data_js(double, double, double, double, double, int, int);
-	void print_data_js(double, double, double, double, double, int);
-	void print_data_js(double, double, double, double, double);
-	void print_data(long int, int, double, double, double, double, double, int);
-	void resize(double &, double &, double &, double &, double &);
+    void print_data_js(double, double, double, double, double, int);
+    void print_data_js(double, double, double, double, double);
+    void print_data(long int, int, int, double, double);
+	void print_data_oop(long int, int, double, double, double, double, double, int);
+    void resize(double &, double &, double &, double &, double &);
 
-	bool first;
-	int N;
-	int p;
-	string run;
-	string filenr;
-	ofstream data_js, data;
+    bool first;
+    int N;
+    int p;
+    string run;
+    ofstream data_js, data;
 };
 
 Print::Print()
 {
-	// Empty
+    // Empty
 }
 
 Print::~Print()
 {
 	data_js << "]\n];";
 
-	data_js.close();
-	data.close();
+    data_js.close();
+    data.close();
 }
 
-void Print::init(string ID, string loopnr, int noCells, int mkfolder)
+void Print::init(string ID, int noCells)
 // Sets up the structure in the filesystem to save the data and opens the files for writing
 // path /
 //        ID /
-//             datafilenr.dat
-//             vidfilenr /
+//             dat /
+//                   data.dat
+//             vid /
 //                   vid.html
 //                   data.js
-//        jquery.js (make sure to put that file in the folder specified by path)      
+//        jquery.js (make sure to put that file in the folder specified by path)
 {
-	first = true;
-	N = noCells;
-	p = 0;
-	run = ID;
-	filenr = loopnr;
-	int mkdir = mkfolder;
-	int check = 0;
+    first = true;
+    N = noCells;
+    p = 0;
+    run = ID;
+    int check = 0;
 
-	if (unixSystem == 1) // Use '/' for filesystem, doesn't need quotes for files/folders with spaces, use cp to copy
-	{
-		ifstream test;
-		test.open((path + run + "/vid" + filenr + "/vid.html").c_str());  // Check if this is gonna overwrite data
+    if(unixSystem == 1) // Use '/' for filesystem, doesn't need quotes for files/folders with spaces, use cp to copy
+    {
+        ifstream test;
+        test.open((path+run+"/vid/vid.html").c_str());  // Check if this is gonna overwrite data
 
-		if (test.fail())
-		{
-			if (mkdir == 1) //only make run directory for first loop
-				check += system(("mkdir " + path + run).c_str());
-			check += system(("mkdir " + path + run + "/vid" + filenr).c_str());
-			if (check != 0)
-			{
-				cout << "Failed to create folders. Status 715\n"; exit(715);
-			}
+        if(test.fail())
+        {
+            check += system(("mkdir "+path+run).c_str());
+            check += system(("mkdir "+path+run+"/dat").c_str());
+            check += system(("mkdir "+path+run+"/vid").c_str());
+            if(check != 0)
+            {
+                cout << "Failed to create folders. Status 715\n"; exit(715);
+            }
 
-			check = 0;
+            check = 0;
 
-			check += system(("cp " + path + "vid.html " + path + run + "/vid" + filenr + "/vid.html").c_str());
+            check += system(("cp "+path+"vid.html "+path+run+"/vid/vid.html").c_str());
 
-			if (check != 0)
-			{
-				cout << "Failed to copy files to vid/. Status 716\n"; exit(716);
-			}
-		}
-		else
-		{
-			test.close();
-			cout << "This action will overwrite old data. Press \'9\' to continue.\n";
-			cin >> check;
-			if (check != 9)
-				exit(9);
-		}
+            if(check != 0)
+            {
+                cout << "Failed to copy files to vid/. Status 716\n"; exit(716);
+            }
+        }
+        else
+        {
+            test.close();
+            cout << "This action will overwrite old data. Press \'9\' to continue.\n";
+            cin >> check;
+            if(check!=9)
+                exit(9);
+        }
 
-		data_js.open((path + run + "/vid" + filenr + "/data.js").c_str());
-		if (data_js.fail())
-		{
-			cout << "Failed to open " << path + run << "/vid" << filenr << "/data.js. Status 717\n";
-			exit(717);
-		}
-		data.open((path + run + "/data" + filenr + ".dat").c_str());
-		if (data.fail())
-		{
-			cout << "Failed to open " << path + run << "/data" << filenr << ".dat. Status 718\n";
-			exit(718);
-		}
-	}
-	else        // Use '\\' for filesystem, needs quotes for files/folders with spaces, use COPY to copy
-	{
-		ifstream test;
-		test.open((path + run + "\\vid" + filenr + "\\vid.html").c_str());  // Check if this is gonna overwrite data
+        data_js.open((path+run+"/vid/data.js").c_str());
+        if(data_js.fail())
+        {
+            cout << "Failed to open " << path+run << "/vid/data.js. Status 717\n";
+            exit(717);
+        }
+        data.open((path+run+"/dat/data.dat").c_str());
+        if(data.fail())
+        {
+            cout << "Failed to open " << path+run << "/vid/data.dat. Status 718\n";
+            exit(718);
+        }
+    }
+    else        // Use '\\' for filesystem, needs quotes for files/folders with spaces, use COPY to copy
+    {
+        ifstream test;
+        test.open((path+run+"\\vid\\vid.html").c_str());  // Check if this is gonna overwrite data
 
-		if (test.fail())
-		{   // Don't actually do these tests because windows seems to screw this up
-			if (mkdir == 1) //only make run directory for first loop
-				check += system(("mkdir \"" + path + run + "\"").c_str());
-			check += system(("mkdir \"" + path + run + "\\vid" + filenr + "\"").c_str());
-			check += system(("copy \"" + path + "vid.html\" \"" + path + run + "\\vid" + filenr + "\\vid.html\"").c_str());
-			if (check != 0)
-			{
-				cout << "Failed to create folders. Status 715\n"; exit(715);
-			}
+        if(test.fail())
+        {   // Don't actually do these tests because windows seems to screw this up
+            check += system(("mkdir \""+path+run+"\"").c_str());
+            check += system(("mkdir \""+path+run+"\\dat\"").c_str());
+            check += system(("mkdir \""+path+run+"\\vid\"").c_str());
+            check += system(("copy \""+path+"vid.html\" \""+path+run+"\\vid\\vid.html\"").c_str());
+            if(check != 0)
+            {
+                cout << "Failed to create folders. Status 715\n"; exit(715);
+            }
 
-			check = 0;
+            check = 0;
 
-			if (check != 0)
-			{
-				cout << "Failed to copy files to vid/. Status 716\n"; exit(716);
-			}
-		}
-		else
-		{
-			test.close();
-			cout << "This action will overwrite old data. Press \'9\' to continue.\n";
-			cin >> check;
-			if (check != 9)
-				exit(9);
-		}
+            if(check != 0)
+            {
+                cout << "Failed to copy files to vid/. Status 716\n"; exit(716);
+            }
+        }
+        else
+        {
+            test.close();
+            cout << "This action will overwrite old data. Press \'9\' to continue.\n";
+            cin >> check;
+            if(check!=9)
+                exit(9);
+        }
 
-		data_js.open((path + run + "\\vid" + filenr + "\\data.js").c_str());
-		if (data_js.fail())
-		{
-			cout << "Failed to open " << (path + run + "\\vid" + filenr + "\\data.js").c_str() << ". Status 717\n";
-			exit(717);
-		}
-		data.open((path + run + "\\data" + filenr + ".dat").c_str());
-		if (data.fail())
-		{
-			cout << "Failed to open " << (path + run + "\\data" + filenr + ".dat").c_str() << ". Status 718\n";
-			exit(718);
-		}
-	}
+        data_js.open((path+run+"\\vid\\data.js").c_str());
+        if(data_js.fail())
+        {
+            cout << "Failed to open " << (path+run+"\\vid\\data.js").c_str() << ". Status 717\n";
+            exit(717);
+        }
+        data.open((path+run+"\\dat\\data.dat").c_str());
+        if(data.fail())
+        {
+            cout << "Failed to open " << (path+run+"\\vid\\data.dat").c_str() << ". Status 718\n";
+            exit(718);
+        }
+    }
 
-	data_js << "var cells = [\n";
+    data_js << "var cells = [\n";
 }
 
 void Print::set_no_particles(int noParticles)
@@ -194,7 +193,7 @@ void Print::set_no_particles(int noParticles)
 
 void Print::print_data_js(double x1, double y1, double x2, double y2, double r, int c, int id)
 // Prints the information about the cell to the data file
-// When called, it prints the x- and y-position of both disks, the radius of the disk, 
+// When called, it prints the x- and y-position of both disks, the radius of the disk,
 // an integer representing the color (could indicate overlap) and an integer containing the id of the cell (cell nr)
 {
 	++p;
@@ -226,7 +225,7 @@ void Print::print_data_js(double x1, double y1, double x2, double y2, double r, 
 
 void Print::print_data_js(double x1, double y1, double x2, double y2, double r, int c)
 // Prints the information about the cell to the data file
-// When called, it prints the x- and y-position of both disks, the radius of the disk, 
+// When called, it prints the x- and y-position of both disks, the radius of the disk,
 // and an integer representing the color (could indicate overlap)
 {
     ++p;
@@ -258,7 +257,7 @@ void Print::print_data_js(double x1, double y1, double x2, double y2, double r, 
 
 void Print::print_data_js(double x1, double y1, double x2, double y2, double r)
 // Prints the information about the cell to the data file
-// When called, it prints the x- and y-position of both disks, the radius of the disk, 
+// When called, it prints the x- and y-position of both disks, the radius of the disk,
 // and an integer representing the color (could indicate overlap)
 {
     ++p;
@@ -288,7 +287,14 @@ void Print::print_data_js(double x1, double y1, double x2, double y2, double r)
         data_js << ",\n";
 }
 
-void Print::print_data(long int time, int ID, double xpos, double ypos, double theta, double L, double oop, int ram)
+void Print::print_data(long int time, int nop, int nodef, double firstQuantity, double secondQuantity)
+// Print data to tab separated datafile every XXX simulation steps. Useful for plotting data in time
+// You can add or remove quantities that you want to make plots of.
+{
+    data << time << "\t" << nop << "\t" << nodef << "\t" << firstQuantity << "\t" << secondQuantity << "\n";
+}
+
+void Print::print_data_oop(long int time, int ID, double xpos, double ypos, double theta, double L, double oop, int ram)
 // Print data to tab separated datafile every XXX simulation steps. Useful for plotting data in time
 // You can add or remove quantities that you want to make plots of.
 {
@@ -299,7 +305,7 @@ void Print::resize(double &x1, double &y1, double &x2, double &y2, double &r)
 // Resizes (and translates) the cells such that they are beautifully displayed
 {
 	int mag = 10; //sets magnification
-	
+
 	x1 *= mag;
     y1 *= -mag;
     x1 += 1000;

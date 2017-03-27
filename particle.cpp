@@ -5,6 +5,7 @@
 #include "twovec.h"
 #include "coordinate.h"
 #include "global.h"
+#include "shortestdistance.h"
 #include "particle.h"
 
 
@@ -71,6 +72,30 @@ void Particle::forceInternal(){
         fy = -ki * (len - L) * (dy / len);
         forces[i] = TwoVec(forces[i].x + fx, forces[i].y + fy);
         forces[i+1] = TwoVec(forces[i+1].x - fx, forces[i+1].y - fy);
+    }
+}
+
+///Prevents the particle from crossing through itself
+void Particle::removeSelfOverlap(){
+    double d;
+    double Ftot;
+    TwoVec Fp;
+    TwoVec Fq;
+    std::array<double, 5> st;
+    for(int i = 0; i < npivot + 1; ++i){ //Loop over segments of p1
+        for (int j = i+2; j < npivot + 1; ++j){ //Loop over segments of other particles
+            st = dist3D_Segment_to_Segment(positions[i], positions[i+1], positions[j], positions[j+1]);
+            d = st[0];
+            if (d < D){ /* Is D a right value to use, and should it not depend on such things as maximum length and number of pivots */
+                Ftot = ko*(d - D);
+                Fp = TwoVec(st[1], st[2])*Ftot; //Force of a segment of particle p1 on p2
+                Fq = Fp*-1;
+                forces[i] += Fq*(1 - st[3]);
+                forces[i + 1] += Fq*st[3];
+                forces[j] += Fp*(1 - st[4]);
+                forces[j + 1] += Fp*st[4];
+            }
+        }
     }
 }
 

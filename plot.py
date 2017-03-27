@@ -25,6 +25,8 @@ for line in f:
         ans.append(w)
         w = []
     i+=1
+    if(i % 100000 == 0):
+        print(i)
 
 numTimeSteps = int(ans[-1][0])+1
 timestep = []
@@ -59,5 +61,5 @@ def animate(timestep, i):
     return None
 
 for i in range(len(timestep)):
-    if(i % 100 == 0):
+    if(i % 2000 == 0):
         animate(timestep, i)
