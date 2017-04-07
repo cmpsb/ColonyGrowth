@@ -18,4 +18,8 @@ struct TwoVec{
     void str();
 };
 
+TwoVec cross(TwoVec u, TwoVec v);
+
+double mySin(double input);
+
 #endif // TWOVEC_H_INCLUDED

@@ -14,5 +14,7 @@ struct Coordinate{
 
 double dist(Coordinate s1, Coordinate s2);
 double ang(Coordinate s1, Coordinate s2);
+double internalAngle(Coordinate s0, Coordinate s1, Coordinate s2);
+Coordinate spinAround(Coordinate point, Coordinate center, double angle);
 
 #endif // COORDINATE_H_INCLUDED

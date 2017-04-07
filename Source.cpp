@@ -16,6 +16,7 @@
 #include "global.h" //Particle needs to access the global variables
 #include "shortestdistance.h"
 #include "particle.h" // All clean and tidy in its own file
+#include "division.h"
 
 
 	//Random number generator
@@ -28,67 +29,6 @@ boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
 randomMu(generator, normalDistGrowth), //generates deviation in growth rate
 randomTheta(generator, normalDistAngle), //generates noise in orientation
 randomLmax(generator, normalDistLength); //generates division lengths
-
-void print(double in){
-    std::cout << in << std::endl;
-}
-
-void divide(Particle &pOld, Particle &pNew){
-
-    // Find middle point of particle
-    int split = npivot/2 + 1;
-    /*
-    Got to add angular noise to the model, but not sure if on particle or spring scale
-    */
-    pNew.mu = pOld.mu + randomMu(); //Growth noise instead of length noise
-    pNew.Lmax = pOld.Lmax;
-    pNew.D = pOld.D;
-    // Make new particle from the left half of the particle positions
-    pNew.positions[0] = pOld.positions[0];
-    // Correct for distance D/2
-    double d = dist(pOld.positions[split], pOld.positions[split-1]);
-    double phi = ang(pOld.positions[split], pOld.positions[split-1]);
-    pNew.positions[npivot+1].x = pOld.positions[split-1].x + (d - pOld.D/2)*cos(phi);
-    pNew.positions[npivot+1].y = pOld.positions[split-1].y + (d - pOld.D/2)*sin(phi);
-    //make space for an interpolated particle
-    for(int i = 0; i < (npivot-1)/2; i++){
-        pNew.positions[2*i+2] = pOld.positions[i+1];
-    }
-    //interpolation
-    for(int i = 1; i <= npivot; i+=2){
-        pNew.positions[i].x = (pNew.positions[i-1].x + pNew.positions[i+1].x)/2;
-        pNew.positions[i].y = (pNew.positions[i-1].y + pNew.positions[i+1].y)/2;
-    }
-    //! Set rest length equal to total particle length divided by number of springs
-    double totalLength;
-    for(int i = 0; i < npivot + 1; i++){
-        totalLength += dist(pNew.positions[i], pNew.positions[i+1]);
-    }
-    pNew.len = totalLength;
-    pNew.L = totalLength/npivot;
-    // ---Update old particle from the right half of the particle positions---
-    d = dist(pOld.positions[split+1], pOld.positions[split]);
-    phi = ang(pOld.positions[split], pOld.positions[split+1]);
-    pOld.positions[0].x = pOld.positions[split+1].x + (d - pOld.D/2)*cos(phi);
-    pOld.positions[0].y = pOld.positions[split+1].y + (d - pOld.D/2)*sin(phi);
-    //make space for an interpolated particle
-    for(int i = 0; i < (npivot-1)/2; i++){
-        pOld.positions[2*i+2] = pOld.positions[i+1+split];
-    }
-    //interpolation
-    for(int i = 1; i <= npivot; i+=2){
-        pOld.positions[i].x = (pOld.positions[i-1].x + pOld.positions[i+1].x)/2;
-        pOld.positions[i].y = (pOld.positions[i-1].y + pOld.positions[i+1].y)/2;
-    }
-    //! Set rest length equal to total particle length divided by number of springs
-    totalLength = 0;
-    for(int i = 0; i < npivot + 1; i++){
-        totalLength += dist(pOld.positions[i], pOld.positions[i+1]);
-    }
-    pOld.len = totalLength;
-    pOld.L = totalLength/npivot;
-
-}
 
 ///Don't forget the next-nearest neighbor approach, it reduces to O(n^5/2)
 void repulsiveForce(vector<Particle> &plist){
@@ -125,12 +65,15 @@ void repulsiveForce(vector<Particle> &plist){
 void growAll(vector<Particle> &p){
     int lengthBefore = p.size(); //Since a particle cannot divide twice during the same growAll() call, only loop over the initial amount of particles
     for(int i = 0; i < lengthBefore; i++){ //Unable to be range based since the ranging object changes length, leading to an infinite loop
-        p[i].grow(); //Why no straight lines without noise
+        p[i].grow(); //Why no straight lines without noise: double uncertainty for pi
         if(p[i].L > p[i].Lmax){
-            Particle pnew = Particle(0, 0, 0, 0, 0, 0); //Necessary copy of all old parameters
+            Particle pnew = Particle(0, 0, 0, 0, diameter, 0); //Necessary copy of all old parameters
             p.push_back(pnew); //Add new particle to p
             divide(p[i], p[p.size() - 1]); //Set new properties of daughter particles
             p[p.size()-1].ID = p.size() - 1; //Set new particle ID
+            std::cout << "DIVISION" << std::endl;
+			p[i].str();
+			p[p.size()-1].str();
         }
     }
 }
@@ -144,40 +87,63 @@ void moveAll(vector<Particle> &p){
     repulsiveForce(p);
     for(Particle &part : p){
         part.removeSelfOverlap();
+        part.torsionForce();
         part.move();
     }
 }
 
+void writeAll(vector<Particle> &p, ofstream &outStream, int ts){
+    for(Particle &part : p){
+        outStream << ts << " ";
+        outStream << part.ID << " ";
+        outStream << part.D << " ";
+        for(Coordinate &coord : part.positions){
+            outStream << coord.x << "," << coord.y << " ";
+        }
+        for(TwoVec &tv : part.forces){
+            outStream << tv.x << "," << tv.y << " ";
+        }
+		outStream << ";";
+    }
+    outStream << std::endl;
+}
+
 int main(){
-    Particle Test = Particle(0, -0, 0, 0.25, 1, 0.01);
-    std::vector<Particle> p;
-    p.push_back(Test);
-    int ts = 0;
     ofstream outStream;
     outStream.open("/home/romano/Documents/Workspace/Results.txt");
-    int foo;
-    while(p.size() < 33){
-        foo = p.size();
-        if(ts % 100 == 0){
-            growAll(p);
-            if(p.size() != foo) print( (double)ts);
-        }
+    std::vector<Particle> p;
+    Particle Test = Particle(0, 0, 0, 1, 1, growthRate);
+    Test.positions[1] = Coordinate(1,1);
+    Test.positions[2] = Coordinate(2,1);
+    p.push_back(Test);
+    int ts = 0;
+    while(p.size() < 16){
+		if(ts % 50 == 0) growAll(p);
+        if(ts % 1000 == 0) writeAll(p, outStream, ts);
         moveAll(p);
-
-        //Output stream to .txt, which is then read in by Matplotlib
-        for(Particle pk : p){
-            outStream << ts << std::endl;
-            outStream << pk.ID << std::endl;
-            outStream << pk.D << std::endl;
-            for(Coordinate c : pk.positions){
-                outStream << c.x << "," << c.y << std::endl;
-            }
-            for(TwoVec f : pk.forces){
-                outStream << f.x << "," << f.y << std::endl;
-            }
-        }
-        ++ts;
+        ts++;
     }
-
     return 0;
 }
+    //        Output stream to .txt, which is then read in by Matplotlib
+
+//    int ts = 0;
+//    while(p.size() < 4){
+//        if(ts % 20 == 0){
+//            growAll(p);
+//        }
+//        moveAll(p);
+//        for(Particle pk : p){
+//            outStream << ts << std::endl;
+//            outStream << pk.ID << std::endl;
+//            outStream << pk.D << std::endl;
+//            for(Coordinate c : pk.positions){
+//                outStream << c.x << "," << c.y << std::endl;
+//            }
+//            for(TwoVec f : pk.forces){
+//                outStream << f.x << "," << f.y << std::endl;
+//            }
+//        }
+//        ++ts;
+//    }
+

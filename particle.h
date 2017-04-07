@@ -14,6 +14,7 @@ struct Particle{
 
     std::array<Coordinate, npivot + 2> positions;
     std::array<TwoVec, npivot + 2> forces;
+    std::array<TwoVec, npivot + 2> torques;
 
     int colour = 240;
 
@@ -21,7 +22,9 @@ struct Particle{
     void str();
     void forceInternal();
     void removeSelfOverlap();
+    void torsionForce();
     void move();
+    void rotate();
     void clear();
 };
 

@@ -10,7 +10,7 @@ npivot = 3
 
 fig, ax = plt.subplots()
 x = np.arange(0, 2*np.pi, 0.01)
-numparticles = 17
+numparticles = 5
 myLines = []
 for j in range(numparticles):
     line, = ax.plot(0, 0)
@@ -94,6 +94,6 @@ global data
 data = formatData(f)
 ax.set_xlim([-10, 10])
 ax.set_ylim([-10, 10])
-ani = animation.FuncAnimation(fig, animate, np.arange(0,len(data)), interval=10)
-plt.show()
+ani = animation.FuncAnimation(fig, animate, np.arange(19700,20420), interval=10)
+ani.save(filename='myvid.mp4')	
 

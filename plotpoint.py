@@ -3,6 +3,7 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+import sys
 
 ##========================================
 npivot = 3
@@ -10,7 +11,7 @@ npivot = 3
 
 fig, ax = plt.subplots()
 x = np.arange(0, 2*np.pi, 0.01)
-numparticles = 17
+numparticles = 4
 myLines = []
 for j in range(numparticles):
     line, = ax.plot(0, 0)
@@ -94,6 +95,7 @@ global data
 data = formatData(f)
 ax.set_xlim([-10, 10])
 ax.set_ylim([-10, 10])
-ani = animation.FuncAnimation(fig, animate, np.arange(0,len(data)), interval=10)
+command_input = sys.argv[1]
+print(command_input)
+animate(int(command_input))
 plt.show()
-

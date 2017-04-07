@@ -1,4 +1,5 @@
 #include <vector>
+#include <cmath>
 #include <array>
 #include <iostream>
 #include <boost/random.hpp>
@@ -33,6 +34,7 @@ Particle::Particle(double xstart, double ystart, double angle, double restlength
     for (int i = 0; i <= npivot + 1; i++){
         forces[i].x = 0;
         forces[i].y = 0;
+        torques[i] = TwoVec(0,0);
     }
 }
 
@@ -53,7 +55,7 @@ void Particle::str(){
         std::cout << "The coordinates of pivot " << i << " is: (" << positions[i].x << "," << positions[i].y << ")" << '\n';
     }
     for(int i = 0; i <= npivot+1; i++ ){
-    std::cout << "The force on pivot " << i << " is: (" << forces[i].x << "," << forces[i].y << ")" << '\n';
+        std::cout << "The force on pivot " << i << " is: (" << forces[i].x << "," << forces[i].y << ")" << '\n';
     }
 }
 
@@ -99,15 +101,51 @@ void Particle::removeSelfOverlap(){
     }
 }
 
+///Torsion spring
+void Particle::torsionForce(){
+    double gamma;
+    TwoVec myTorque;
+    TwoVec F;
+    double newAngle;
+    for(int i = 1; i < npivot + 1; ++i){
+        gamma = internalAngle(positions[i - 1], positions[i], positions[i + 1]);
+        myTorque = TwoVec(0.0,0.0);
+        myTorque.z = -kappa*(gamma - restAngle); //Torque is divided evenly over both ends of the bar
+        //To the "left"
+        F = cross(myTorque, (positions[i-1] - positions[i]));
+
+        newAngle = internalAngle(positions[i-1] + F, positions[i], positions[i + 1]);
+        //std::cout << i  << "{ " << newAngle << " , " << gamma << " }" << std::endl;
+        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma) && i-1){
+            if(i-1 != npivot-1){
+                forces[i-1] += F;
+            }
+
+        }
+        else{
+            if(i-1 != npivot-1){
+                    forces[i-1] += F*(-1);
+            }
+        }
+        //To the "right"
+        F = cross(myTorque, positions[i+1] - positions[i]);
+        newAngle = internalAngle(positions[i-1], positions[i], positions[i + 1] + F);
+        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
+            forces[i+1] += F;
+        }
+        else{
+            forces[i+1] += F*(-1);
+        }
+    }
+
+}
+
 ///Moves the particle
 void Particle::move(){
-    double xvel;
-    double yvel;
+    TwoVec vel;
     for(int i = 0; i < npivot + 2; i++){
-        xvel = 2*forces[i].x / (dzeta * D);
-        yvel = 2*forces[i].y / (dzeta * D);
-        positions[i].x = positions[i].x + xvel*dt;
-        positions[i].y = positions[i].y + yvel*dt;
+        vel = forces[i]*(2/dzeta*D);
+        positions[i] = positions[i] + vel*dt;
     }
 }
 
@@ -116,5 +154,8 @@ void Particle::clear(){
     TwoVec naught = TwoVec(0, 0);
     for(TwoVec &f : forces){
         f = naught;
+    }
+    for(TwoVec &myTau : torques){
+        myTau = TwoVec(0,0);
     }
 }

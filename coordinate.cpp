@@ -1,3 +1,4 @@
+#include "global.h"
 #include "twovec.h"
 #include "coordinate.h"
 #include <cmath>
@@ -42,4 +43,45 @@ double dist(Coordinate s1, Coordinate s2){
 //Returns angle between 2 coordinates
 double ang(Coordinate s1, Coordinate s2){
     return atan2(s1.y - s2.y, s1.x - s2.x);
+}
+
+//Finds the internal angle between 3 points
+double internalAngle(Coordinate a, Coordinate b, Coordinate c){
+    double alpha = atan2(b.y - a.y, b.x - a.x);
+    double beta = atan2(b.y - c.y, b.x - c.x);
+    if(alpha > beta){
+        double theta = alpha - beta;
+        if(theta > pi){
+            return 2*pi - theta;
+        }
+        return theta;
+    }
+    double theta = beta - alpha;
+    if(theta > pi){
+        return 2*pi - theta;
+    }
+    return theta;
+
+}
+
+//Rotate point around center counterclockwise by angle radians
+Coordinate spinAround(Coordinate point, Coordinate center, double angle){
+    double cx = center.x;
+    double cy = center.y;
+
+    double s = sin(angle);
+    double c = cos(angle);
+
+    // translate point back to origin:
+    point.x -= cx;
+    point.y -= cy;
+
+    // rotate point
+    float xnew = point.x * c - point.y * s;
+    float ynew = point.x * s + point.y * c;
+
+    // translate point back:
+    point.x = xnew + cx;
+    point.y = ynew + cy;
+  return point;
 }

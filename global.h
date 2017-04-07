@@ -11,14 +11,16 @@ const double tau = diameter * dzeta / dt;
 
 	//Parameters
 const double maxLoverD = 2.0; //gives relation between maxL and D
-const double ki = 0.25 * tau; //internal spring constant, must be smaller than zeta*D*dt/2 otherwise system will explode, good value is 0.25
-const double ko = 0.1 * tau; //overlap spring constant
+const double ki = 0.1 * tau; //internal spring constant, must be smaller than zeta*D*dt/2 otherwise system will explode, good value is 0.25
+const double ko = 0.2 * tau; //overlap spring constant
 const int relaxTime = 5; //set time to let system relax after growth step
 const double growthRate = 0.00005 * tau * relaxTime; //number gives growth rate per time step. exp: 1.23 per hour, small compared to ki for relaxation
 const double growthRateDev = 0.05 * growthRate; //sets deviation in growth rate
 const double maxLengthDev = 0.02 * diameter * maxLoverD; //sets deviation in max length
 const double orientNoise = 0.01; //sets value for noise in orientation of daughter cells to prevent growing in one line
 const int npivot = 3; //number of pivots
+const double kappa = 0.1; //torsional spring constant, must be smaller or equal to 0.1!
+const double restAngle = pi;
 
 	//Constants
 const double maxLength = diameter * maxLoverD; //sets mean maximum length of particles
