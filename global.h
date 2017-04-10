@@ -18,8 +18,8 @@ const double growthRate = 0.00005 * tau * relaxTime; //number gives growth rate 
 const double growthRateDev = 0.05 * growthRate; //sets deviation in growth rate
 const double maxLengthDev = 0.02 * diameter * maxLoverD; //sets deviation in max length
 const double orientNoise = 0.01; //sets value for noise in orientation of daughter cells to prevent growing in one line
-const int npivot = 3; //number of pivots
-const double kappa = 0.1; //torsional spring constant, must be smaller or equal to 0.1!
+const int npivot = 1; //number of pivots
+const double kappa = 0.0001; //torsional spring constant, must be smaller or equal to 0.1!
 const double restAngle = pi;
 
 	//Constants

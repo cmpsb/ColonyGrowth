@@ -86,7 +86,7 @@ void Particle::removeSelfOverlap(){
     std::array<double, 5> st;
     for(int i = 0; i < npivot + 1; ++i){ //Loop over segments of p1
         for (int j = i+2; j < npivot + 1; ++j){ //Loop over segments of other particles
-            st = dist3D_Segment_to_Segment(positions[i], positions[i+1], positions[j], positions[j+1]);
+            st = shortest_distance(positions[i], positions[i+1], positions[j], positions[j+1]);
             d = st[0];
             if (d < D){ /* Is D a right value to use, and should it not depend on such things as maximum length and number of pivots */
                 Ftot = ko*(d - D);
@@ -104,38 +104,57 @@ void Particle::removeSelfOverlap(){
 ///Torsion spring
 void Particle::torsionForce(){
     double gamma;
-    TwoVec myTorque;
-    TwoVec F;
+    double myTorque;
+    double F;
+    double arm_length;
     double newAngle;
+    TwoVec v_arm;
+    TwoVec arm_hat;
+    TwoVec z_hat = TwoVec(0, 0);
+    z_hat.z = 1;
+    TwoVec F_hat;
+    TwoVec myForce;
     for(int i = 1; i < npivot + 1; ++i){
         gamma = internalAngle(positions[i - 1], positions[i], positions[i + 1]);
-        myTorque = TwoVec(0.0,0.0);
-        myTorque.z = -kappa*(gamma - restAngle); //Torque is divided evenly over both ends of the bar
+        myTorque = -kappa*(gamma - restAngle); //Torque is divided evenly over both ends of the bar
         //To the "left"
-        F = cross(myTorque, (positions[i-1] - positions[i]));
+        v_arm = positions[i-1] - positions[i];
+        arm_length = dist(positions[i-1], positions[i]);
+        F = myTorque/arm_length;
+        arm_hat = v_arm*(1/arm_length);
+        F_hat = cross(z_hat, arm_hat);
+        myForce = F_hat * F;
 
-        newAngle = internalAngle(positions[i-1] + F, positions[i], positions[i + 1]);
-        //std::cout << i  << "{ " << newAngle << " , " << gamma << " }" << std::endl;
-        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma) && i-1){
-            if(i-1 != npivot-1){
-                forces[i-1] += F;
-            }
-
+        newAngle = internalAngle(positions[i-1] + myForce, positions[i], positions[i + 1]);
+        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
+            forces[i-1] += myForce;
         }
         else{
-            if(i-1 != npivot-1){
-                    forces[i-1] += F*(-1);
-            }
+            forces[i-1] += myForce*(-1);
         }
         //To the "right"
-        F = cross(myTorque, positions[i+1] - positions[i]);
-        newAngle = internalAngle(positions[i-1], positions[i], positions[i + 1] + F);
+        v_arm = positions[i+1] - positions[i];
+        arm_length = dist(positions[i+1], positions[i]);
+        F = myTorque/arm_length;
+        arm_hat = v_arm*(1/arm_length);
+        F_hat = cross(z_hat, arm_hat);
+        myForce = F_hat * F;
+
+        newAngle = internalAngle(positions[i - 1], positions[i], positions[i+1] + myForce);
         if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
-            forces[i+1] += F;
+            forces[i+1] += myForce;
         }
         else{
-            forces[i+1] += F*(-1);
+            forces[i-1] += myForce*(-1);
         }
+//        F = cross(myTorque, positions[i+1] - positions[i]);
+//        newAngle = internalAngle(positions[i-1], positions[i], positions[i + 1] + F);
+//        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
+//            forces[i+1] += F;
+//        }
+//        else{
+//            forces[i+1] += F*(-1);
+//        }
     }
 
 }

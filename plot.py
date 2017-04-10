@@ -5,12 +5,12 @@ import matplotlib.animation as animation
 import numpy as np
 
 ##========================================
-npivot = 3
+npivot = 1
 ##========================================
 
 fig, ax = plt.subplots()
 x = np.arange(0, 2*np.pi, 0.01)
-numparticles = 17
+numparticles = 33
 myLines = []
 for j in range(numparticles):
     line, = ax.plot(0, 0)
@@ -94,6 +94,6 @@ global data
 data = formatData(f)
 ax.set_xlim([-10, 10])
 ax.set_ylim([-10, 10])
-ani = animation.FuncAnimation(fig, animate, np.arange(0,len(data)), interval=10)
+ani = animation.FuncAnimation(fig, animate, np.arange(0,len(data)), interval=0.01, repeat=False)
 plt.show()
 

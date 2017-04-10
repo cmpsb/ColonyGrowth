@@ -7,15 +7,27 @@
 #include <vector>
 #include <array>
 #include <deque>
+#include <boost/random.hpp>
 #include "particle.h"
 #include "division.h"
+
+	//Random number generator
+boost::mt19937 generator(time(0)); //number generator from random list
+boost::normal_distribution<> //setup distributions
+normalDistGrowth(0.0, growthRateDev), //growth distribution added to daughter cells, sigma = 0.277
+normalDistAngle(0.0, 0), //Noise in orientation for daughter cells
+normalDistLength(maxLength, maxLengthDev); //distribution of maximum length that particles can reach, 4.54, sigma = 0.46
+boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+randomMu(generator, normalDistGrowth), //generates deviation in growth rate
+randomTheta(generator, normalDistAngle), //generates noise in orientation
+randomLmax(generator, normalDistLength); //generates division lengths
 
 double getTotalLength(std::vector<Coordinate> &myPoints){
     double l = 0;
     for(int i = 0; i < myPoints.size()-1; ++i){
         l+=dist(myPoints[i], myPoints[i + 1]);
     }
-    l /= (myPoints.size()+1);
+    l /= (npivot+1);
 }
 
 ///Finds Coordinate on a line that is a distance l removed from point circleCenter, returning bool to show if it succeeded
@@ -45,28 +57,28 @@ std::pair<Coordinate, bool> equidistantPointOnLine(Coordinate p1, Coordinate p2,
 void relax(std::vector<Coordinate> &myArray){
     std::deque<Coordinate> myDeq;
     for(Coordinate i : myArray){
-        myDeq.push_back(i);
+        myDeq.push_back(i); // Fill the double-ended queue (sort of like a two-headed vector) up with all coordinates
     }
-    std::vector<Coordinate> fixed;
+    std::vector<Coordinate> fixed; // Contains the relaxed points
     fixed.push_back(myDeq[0]);
-    myDeq.pop_front();
+    myDeq.pop_front(); // Move the zeroth element, that is relaxed by definition, to the fixed vector
 
-    double l = getTotalLength(myArray);
+    double l = getTotalLength(myArray); // Relaxation length
     bool flag = false;
-    std::pair<Coordinate, bool> myData;
+    std::pair<Coordinate, bool> myData; // Return type of equidistantPointOnLine
 
     for(int i = 0; i < (npivot+1)/2+1; ++i){
         while(!flag){
             myData = equidistantPointOnLine(fixed[i], myDeq[0], fixed[i], l);
             flag = myData.second;
             if(!flag){
-                myDeq.pop_front();
+                myDeq.pop_front(); // Pop the line if the point is passed
             }
         }
         fixed.push_back(myData.first);
         flag = false;
     }
-    fixed.push_back(myArray[(npivot+1)/2]);
+    if(fixed.size() != npivot+2) fixed.push_back(myArray[(npivot+1)/2]); // To prevent off-by-one errors
     myArray = fixed;
 }
 
@@ -100,6 +112,7 @@ void divide(Particle &pOld, Particle &pNew){
         newPositionArray[i] = newPositions[i];
     }
     pNew.positions = newPositionArray;
+    pNew.positions[0] = pNew.positions[0] - TwoVec(0, 0.001); //Angle noise!
 
     // Set rest length equal to total particle length divided by number of springs
     double totalLength;
@@ -123,14 +136,13 @@ void divide(Particle &pOld, Particle &pNew){
     shifted = pOld.positions[split+1] + e*(d-pOld.D/2);
     newPositions.push_back(shifted);
 
-    for(auto foo : newPositions) foo.str();
-
     // Remove tension from all springs but one
     relax(newPositions);
     for(int i = 0; i < npivot+2; ++i){
         newPositionArray[i] = newPositions[i];
     }
     pOld.positions = newPositionArray;
+    pOld.positions[0] = pOld.positions[0] + TwoVec(0, 0.001);
 
     // Set rest length equal to total particle length divided by number of springs
     totalLength = 0;
