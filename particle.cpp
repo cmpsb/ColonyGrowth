@@ -80,25 +80,39 @@ void Particle::forceInternal(){
 ///Prevents the particle from crossing through itself
 void Particle::removeSelfOverlap(){
     double d;
+    double d_rest;
     double Ftot;
-    TwoVec Fp;
-    TwoVec Fq;
-    std::array<double, 5> st;
-    for(int i = 0; i < npivot + 1; ++i){ //Loop over segments of p1
-        for (int j = i+2; j < npivot + 1; ++j){ //Loop over segments of other particles
-            st = shortest_distance(positions[i], positions[i+1], positions[j], positions[j+1]);
-            d = st[0];
-            if (d < D){ /* Is D a right value to use, and should it not depend on such things as maximum length and number of pivots */
-                Ftot = ko*(d - D);
-                Fp = TwoVec(st[1], st[2])*Ftot; //Force of a segment of particle p1 on p2
-                Fq = Fp*-1;
-                forces[i] += Fq*(1 - st[3]);
-                forces[i + 1] += Fq*st[3];
-                forces[j] += Fp*(1 - st[4]);
-                forces[j + 1] += Fp*st[4];
+    TwoVec v;
+    for(int i = 0; i < npivot; ++i){
+        for(int j = i+2; j < npivot + 2; ++j){
+            d = dist(positions[i], positions[j]);
+            d_rest = dist(positions[i], positions[i + 1]);
+            if(d < d_rest){
+                Ftot = ko*(d - d_rest);
+                v = positions[i + 2] - positions[i];
+                v = v*(1/(v*v));
+                forces[i] += v*Ftot;
+                forces[j] += v*Ftot*(-1);
             }
         }
     }
+//    double Ftot;
+//    TwoVec Fp;
+//    TwoVec Fq;
+//    for(int i = 0; i < npivot + 1; ++i){ //Loop over segments of p1
+//        for (int j = i; j < npivot + 1; ++j){ //Loop over segments of other particles
+//            d = st[0];
+//            if (d < dist(positions[i], positions[i+1])){ /* Is D a right value to use, and should it not depend on such things as maximum length and number of pivots */
+//                Ftot = ko*(d - D);
+//                Fp = TwoVec(st[1], st[2])*Ftot; //Force of a segment of particle p1 on p2
+//                Fq = Fp*-1;
+//                forces[i] += Fq*(1 - st[3]);
+//                forces[i + 1] += Fq*st[3];
+//                forces[j] += Fp*(1 - st[4]);
+//                forces[j + 1] += Fp*st[4];
+//            }
+//        }
+//    }
 }
 
 ///Torsion spring
@@ -128,9 +142,12 @@ void Particle::torsionForce(){
         newAngle = internalAngle(positions[i-1] + myForce, positions[i], positions[i + 1]);
         if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
             forces[i-1] += myForce;
+            // Reduce net force to 0
+            forces[i] += myForce*(-1);
         }
         else{
             forces[i-1] += myForce*(-1);
+            forces[i] += myForce;
         }
         //To the "right"
         v_arm = positions[i+1] - positions[i];
@@ -143,9 +160,11 @@ void Particle::torsionForce(){
         newAngle = internalAngle(positions[i - 1], positions[i], positions[i+1] + myForce);
         if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
             forces[i+1] += myForce;
+            forces[i] += myForce*(-1);
         }
         else{
             forces[i-1] += myForce*(-1);
+            forces[i] += myForce;
         }
 //        F = cross(myTorque, positions[i+1] - positions[i]);
 //        newAngle = internalAngle(positions[i-1], positions[i], positions[i + 1] + F);
@@ -165,6 +184,11 @@ void Particle::move(){
     for(int i = 0; i < npivot + 2; i++){
         vel = forces[i]*(2/dzeta*D);
         positions[i] = positions[i] + vel*dt;
+    }
+    //Update head-to-head length too
+    len = 0;
+    for(int j = 0; j < npivot + 1; ++j){
+        len += dist(positions[j], positions[j+1]);
     }
 }
 

@@ -7,6 +7,7 @@
 #include <vector>
 #include <array>
 #include <deque>
+#include <tuple>
 #include <boost/random.hpp>
 #include "particle.h"
 #include "division.h"
@@ -28,6 +29,7 @@ double getTotalLength(std::vector<Coordinate> &myPoints){
         l+=dist(myPoints[i], myPoints[i + 1]);
     }
     l /= (npivot+1);
+	return l;
 }
 
 ///Finds Coordinate on a line that is a distance l removed from point circleCenter, returning bool to show if it succeeded
@@ -53,6 +55,27 @@ std::pair<Coordinate, bool> equidistantPointOnLine(Coordinate p1, Coordinate p2,
     return std::pair<Coordinate, bool>{Coordinate(0,0), false}; // If no equidistant point is found, a coordinate that is over nine thousand will be returned
 }
 
+void correctHead(std::vector<Coordinate> &pos, double D){
+    std::vector<Coordinate> myVec;
+    for(Coordinate p : pos){
+        myVec.push_back(p);
+    }
+    Coordinate endPoint = myVec.back();
+    int s = 1;
+    while(s != 0){
+        s = myVec.size();
+        std::pair<Coordinate, bool> ans = equidistantPointOnLine(myVec[s - 1], myVec[s - 2], endPoint, D/2);
+        if(ans.second){
+            myVec.pop_back();
+            myVec.push_back(ans.first);
+            break;
+        }
+        else myVec.pop_back();
+    }
+    pos.clear();
+    for(Coordinate foo : myVec) pos.push_back(foo);
+}
+
 ///Makes it such that all points besides the last one are equidistant and therefore relaxed
 void relax(std::vector<Coordinate> &myArray){
     std::deque<Coordinate> myDeq;
@@ -62,7 +85,7 @@ void relax(std::vector<Coordinate> &myArray){
     std::vector<Coordinate> fixed; // Contains the relaxed points
     fixed.push_back(myDeq[0]);
     myDeq.pop_front(); // Move the zeroth element, that is relaxed by definition, to the fixed vector
-
+	
     double l = getTotalLength(myArray); // Relaxation length
     bool flag = false;
     std::pair<Coordinate, bool> myData; // Return type of equidistantPointOnLine
@@ -78,35 +101,30 @@ void relax(std::vector<Coordinate> &myArray){
         fixed.push_back(myData.first);
         flag = false;
     }
-    if(fixed.size() != npivot+2) fixed.push_back(myArray[(npivot+1)/2]); // To prevent off-by-one errors
-    myArray = fixed;
+    if(fixed.size() != npivot+2) fixed.push_back(myArray.back()); // To prevent off-by-one errors
+	myArray.clear();
+	for(Coordinate foo : fixed) myArray.push_back(foo);
 }
 
 void divide(Particle &pOld, Particle &pNew){
 
     // Find middle point of particle
     int split = (npivot+1)/2;
-    /*
-    Got to add angular noise to the model, but not sure if on particle or spring scale
-    */
     pNew.mu = pOld.mu; //Growth noise instead of length noise
     pNew.Lmax = pOld.Lmax;
     pNew.D = pOld.D;
-
+	
     // Insert points of old particle for relaxation
     std::vector<Coordinate> newPositions;
     newPositions.push_back(pOld.positions[0]);
     for(int i = 0; i < (npivot-1)/2; i++){
         newPositions.push_back(pOld.positions[i+1]);
     }
-    double d = dist(pOld.positions[split], pOld.positions[split-1]);
-    double phi = ang(pOld.positions[split], pOld.positions[split-1]);
-    TwoVec e{cos(phi), mySin(phi)};
-    Coordinate shifted = pOld.positions[split-1] + e*(d-pOld.D/2);
-    newPositions.push_back(shifted);
-
+    newPositions.push_back(pOld.positions[split]);
+    correctHead(newPositions, pOld.D);
     // Remove tension from all springs but one
     relax(newPositions);
+
     std::array<Coordinate, npivot+2> newPositionArray;
     for(int i = 0; i < npivot+2; ++i){
         newPositionArray[i] = newPositions[i];
@@ -130,11 +148,8 @@ void divide(Particle &pOld, Particle &pNew){
     for(int i = 0; i < (npivot-1)/2; i++){
         newPositions.push_back(pOld.positions[i+1+split]);
     }
-    d = dist(pOld.positions[split], pOld.positions[split+1]);
-    phi = ang(pOld.positions[split], pOld.positions[split+1]);
-    e = TwoVec(cos(phi), mySin(phi));
-    shifted = pOld.positions[split+1] + e*(d-pOld.D/2);
-    newPositions.push_back(shifted);
+    newPositions.push_back(pOld.positions[split]);
+    correctHead(newPositions, pOld.D);
 
     // Remove tension from all springs but one
     relax(newPositions);
@@ -153,5 +168,3 @@ void divide(Particle &pOld, Particle &pNew){
     pOld.L = totalLength/(npivot+1);
 
 }
-
-
