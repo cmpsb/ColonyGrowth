@@ -6,7 +6,7 @@
 #include "twovec.h"
 #include "coordinate.h"
 #include "global.h"
-#include "shortestdistance.h"
+#include "repulsion.h"
 #include "particle.h"
 
 

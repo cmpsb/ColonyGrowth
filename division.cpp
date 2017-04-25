@@ -90,7 +90,7 @@ void relax(std::vector<Coordinate> &myArray){
     bool flag = false;
     std::pair<Coordinate, bool> myData; // Return type of equidistantPointOnLine
 
-    for(int i = 0; i < (npivot+1)/2+1; ++i){
+    for(int i = 0; i < (npivot+5)/2; ++i){
         while(!flag){
             myData = equidistantPointOnLine(fixed[i], myDeq[0], fixed[i], l);
             flag = myData.second;
@@ -121,9 +121,13 @@ void divide(Particle &pOld, Particle &pNew){
         newPositions.push_back(pOld.positions[i+1]);
     }
     newPositions.push_back(pOld.positions[split]);
-    correctHead(newPositions, pOld.D);
+    correctHead(newPositions, pOld.D);	
     // Remove tension from all springs but one
-    relax(newPositions);
+    if(npivot > 1) relax(newPositions);
+	else if(npivot == 1){
+		newPositions.push_back(newPositions[1]);
+		newPositions[1] = newPositions[0] + ((newPositions[2] - newPositions[0])*0.5);
+	}
 
     std::array<Coordinate, npivot+2> newPositionArray;
     for(int i = 0; i < npivot+2; ++i){
@@ -145,14 +149,20 @@ void divide(Particle &pOld, Particle &pNew){
     // ---Update old particle from the right half of the particle positions---
     newPositions.clear();
     newPositions.push_back(pOld.positions[npivot+1]);
-    for(int i = 0; i < (npivot-1)/2; i++){
-        newPositions.push_back(pOld.positions[i+1+split]);
+    for(int i = npivot; i > split; i--){
+        newPositions.push_back(pOld.positions[i]);
     }
     newPositions.push_back(pOld.positions[split]);
+
+	for(auto foo : newPositions) foo.str();
     correctHead(newPositions, pOld.D);
 
     // Remove tension from all springs but one
-    relax(newPositions);
+    if(npivot > 1) relax(newPositions);
+	else if(npivot == 1){
+		newPositions.push_back(newPositions[1]);
+		newPositions[1] = newPositions[0] + ((newPositions[2] - newPositions[0])*0.5);
+	}
     for(int i = 0; i < npivot+2; ++i){
         newPositionArray[i] = newPositions[i];
     }

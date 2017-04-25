@@ -13,7 +13,7 @@
 #include "twovec.h" //Coordinate needs to know what a TwoVec is
 #include "coordinate.h" //Particle needs to know what a Coordinate is
 #include "global.h" //Particle needs to access the global variables
-#include "shortestdistance.h"
+#include "repulsion.h"
 #include "particle.h" // All clean and tidy in its own file
 #include "division.h"
 
@@ -23,11 +23,15 @@ void growAll(vector<Particle> &p, int ts){
     for(int i = 0; i < lengthBefore; i++){ //Unable to be range based since the ranging object changes length, leading to an infinite loop
         p[i].grow();
         if(p[i].L > p[i].Lmax){
+			std::cout << "before" << std::endl;
+			p[i].str();
             Particle pnew = Particle(0, 0, 0, 0, diameter, 0); //Necessary copy of all old parameters
             p.push_back(pnew); //Add new particle to p
             divide(p[i], p[p.size() - 1]); //Set new properties of daughter particles
             p[p.size()-1].ID = p.size() - 1; //Set new particle ID
             std::cout << "Division number " << p.size() - 1 << " has occurred at time step " << ts << std::endl;
+			p[i].str();
+			p[1].str();
         }
     }
 }
@@ -65,9 +69,10 @@ void writeAll(vector<Particle> &p, ofstream &outStream, int ts){
     std::cout << ts << std::endl;
 }
 
-void run(){
+void run(std::string path){
+	std::cout << path << std::endl;
     ofstream outStream;
-    if(onCluster) outStream.open("/home/rvangenderen/code/Results.txt");
+    if(onCluster) outStream.open(path);
     else outStream.open("/home/romano/Documents/Workspace/1E-2.txt");
     Particle Test(0, 0, 0, startLength, diameter, growthRate);
     std::vector<Particle> p;
@@ -81,8 +86,8 @@ void run(){
     }
 }
 
-int main(){
-run();
+int main(int argc, char* argv[]){
+run("/home/romano/Documents/STUFFTODAY/today.txt");
 return 0;
 }
 
