@@ -31,10 +31,9 @@ Particle::Particle(double xstart, double ystart, double angle, double restlength
         positions[i].y = ystart + (positions[npivot + 1].y - ystart)/(npivot + 1)*i;
     }
 
-    for (int i = 0; i <= npivot + 1; i++){
-        forces[i].x = 0;
-        forces[i].y = 0;
-        torques[i] = TwoVec(0,0);
+    for (int i = 0; i < npivot + 2; i++){
+        forces[i] = TwoVec(0, 0);
+        pressures[i] = 0;
     }
 }
 
@@ -57,23 +56,22 @@ void Particle::str(){
     for(int i = 0; i <= npivot+1; i++ ){
         std::cout << "The force on pivot " << i << " is: (" << forces[i].x << "," << forces[i].y << ")" << '\n';
     }
+    for(int i = 0; i <= npivot+1; i++ ){
+        std::cout << "The pressure on pivot " << i << " is " << pressures[i]  << '\n';
+    }
 }
 
 ///Calculates the internal spring force
 void Particle::forceInternal(){
-    double dx;
-    double dy;
+    TwoVec dr;
     double len;
-    double fx;
-    double fy;
-    for(int i = 0; i < npivot+1; i++){
-        dx = positions[i].x - positions[i+1].x;
-        dy = positions[i].y - positions[i+1].y;
-        len = dist(positions[i], positions[i+1]);
-        fx = -ki * (len - L) * (dx / len);
-        fy = -ki * (len - L) * (dy / len);
-        forces[i] = TwoVec(forces[i].x + fx, forces[i].y + fy);
-        forces[i+1] = TwoVec(forces[i+1].x - fx, forces[i+1].y - fy);
+    TwoVec fint;
+    for(int i = 0; i < npivot + 1; ++i){
+        dr = positions[i] - positions[i + 1];
+        len = dist(positions[i], positions[i + 1]);
+        fint = -ki * (len - L)/len * dr;
+        forces[i] += fint;
+        forces[i + 1] -= fint;
     }
 }
 
@@ -96,86 +94,42 @@ void Particle::removeSelfOverlap(){
             }
         }
     }
-//    double Ftot;
-//    TwoVec Fp;
-//    TwoVec Fq;
-//    for(int i = 0; i < npivot + 1; ++i){ //Loop over segments of p1
-//        for (int j = i; j < npivot + 1; ++j){ //Loop over segments of other particles
-//            d = st[0];
-//            if (d < dist(positions[i], positions[i+1])){ /* Is D a right value to use, and should it not depend on such things as maximum length and number of pivots */
-//                Ftot = ko*(d - D);
-//                Fp = TwoVec(st[1], st[2])*Ftot; //Force of a segment of particle p1 on p2
-//                Fq = Fp*-1;
-//                forces[i] += Fq*(1 - st[3]);
-//                forces[i + 1] += Fq*st[3];
-//                forces[j] += Fp*(1 - st[4]);
-//                forces[j + 1] += Fp*st[4];
-//            }
-//        }
-//    }
 }
 
 ///Torsion spring
 void Particle::torsionForce(){
-    double gamma;
-    double myTorque;
-    double F;
-    double arm_length;
-    double newAngle;
-    TwoVec v_arm;
-    TwoVec arm_hat;
-    TwoVec z_hat = TwoVec(0, 0);
-    z_hat.z = 1;
-    TwoVec F_hat;
-    TwoVec myForce;
+    double alpha;
+    double torque;
+    TwoVec m;
+    TwoVec tau_hat;
+    TwoVec l1;
+    TwoVec l2;
+    TwoVec f;
     for(int i = 1; i < npivot + 1; ++i){
-        gamma = internalAngle(positions[i - 1], positions[i], positions[i + 1]);
-        myTorque = -kappa*(gamma - restAngle); //Torque is divided evenly over both ends of the bar
-        //To the "left"
-        v_arm = positions[i-1] - positions[i];
-        arm_length = dist(positions[i-1], positions[i]);
-        F = myTorque/arm_length;
-        arm_hat = v_arm*(1/arm_length);
-        F_hat = cross(z_hat, arm_hat);
-        myForce = F_hat * F;
-
-        newAngle = internalAngle(positions[i-1] + myForce, positions[i], positions[i + 1]);
-        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
-            forces[i-1] += myForce;
-            // Reduce net force to 0
-            forces[i] += myForce*(-1);
-        }
-        else{
-            forces[i-1] += myForce*(-1);
-            forces[i] += myForce;
-        }
-        //To the "right"
-        v_arm = positions[i+1] - positions[i];
-        arm_length = dist(positions[i+1], positions[i]);
-        F = myTorque/arm_length;
-        arm_hat = v_arm*(1/arm_length);
-        F_hat = cross(z_hat, arm_hat);
-        myForce = F_hat * F;
-
-        newAngle = internalAngle(positions[i - 1], positions[i], positions[i+1] + myForce);
-        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
-            forces[i+1] += myForce;
-            forces[i] += myForce*(-1);
-        }
-        else{
-            forces[i-1] += myForce*(-1);
-            forces[i] += myForce;
-        }
-//        F = cross(myTorque, positions[i+1] - positions[i]);
-//        newAngle = internalAngle(positions[i-1], positions[i], positions[i + 1] + F);
-//        if(fabs(restAngle - newAngle) < fabs(restAngle - gamma)){
-//            forces[i+1] += F;
-//        }
-//        else{
-//            forces[i+1] += F*(-1);
-//        }
+        l1 = positions[i] - positions[i - 1];
+        l2 = positions[i + 1] - positions[i];
+        alpha = angleBetweenVectors(l1, l2);
+        torque = kappa*alpha;
+		m = cross(l1, l2);
+		if(fabs(m.z) > EPSILON){
+            tau_hat.z = m.z/(sqrt(m.z*m.z));
+            f = torque/(norm(l1)*norm(l1))*(cross(l1, tau_hat));
+            forces[i - 1] += f;
+            forces[i] -= f;
+            f = torque/(norm(l2)*norm(l2))*(cross(l2, tau_hat));
+            forces[i + 1] += f;
+            forces[i] -= f;
+		}
     }
 
+}
+
+
+void Particle::straighten(){
+	for(int i = 1; i < npivot + 1; ++i){
+		positions[i].x = (positions[i+1].x + positions[i-1].x)/2;
+		positions[i].y = (positions[i+1].y + positions[i-1].y)/2;
+	}
 }
 
 ///Moves the particle
@@ -198,7 +152,7 @@ void Particle::clear(){
     for(TwoVec &f : forces){
         f = naught;
     }
-    for(TwoVec &myTau : torques){
-        myTau = TwoVec(0,0);
+    for(double &i : pressures){
+        i = 0;
     }
 }

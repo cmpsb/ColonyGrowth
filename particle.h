@@ -14,7 +14,7 @@ struct Particle{
 
     std::array<Coordinate, npivot + 2> positions;
     std::array<TwoVec, npivot + 2> forces;
-    std::array<TwoVec, npivot + 2> torques;
+    std::array<double, npivot + 2> pressures;
 
     int colour = 240;
 
@@ -26,6 +26,7 @@ struct Particle{
     void move();
     void rotate();
     void clear();
+	void straighten();
 };
 
 #endif // PARTICLE_H_INCLUDED
