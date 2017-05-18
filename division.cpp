@@ -138,7 +138,7 @@ void divide(Particle &pOld, Particle &pNew){
     }
 
     // Set rest length equal to total particle length divided by number of springs
-    double totalLength;
+    double totalLength = 0;
     for(int i = 0; i < npivot + 1; i++){
         totalLength += dist(pNew.positions[i], pNew.positions[i+1]);
     }
